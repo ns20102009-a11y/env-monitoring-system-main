@@ -1,0 +1,19 @@
+# ──────────────────────────────────────────────────────────────────────
+# requirements.txt — Environmental Monitoring System
+# Install with:  pip install -r requirements.txt
+#
+# ✅ Works on Windows, macOS, Linux — any Python 3.8+
+# ──────────────────────────────────────────────────────────────────────
+
+# Streamlit: Web dashboard framework
+streamlit>=1.35.0
+
+# Pandas: Data manipulation for dashboard DataFrames
+pandas>=2.0.0
+
+# ──────────────────────────────────────────────────────────────────────
+# OPTIONAL: Real Pathway engine (Linux/macOS + Python 3.10/3.11/3.12 only)
+# Uncomment the line below IF you are on Linux or macOS with Python 3.10-3.12
+# Then uncomment the native Pathway code block in monitoring_pipeline.py
+# ──────────────────────────────────────────────────────────────────────
+# pathway==0.16.3

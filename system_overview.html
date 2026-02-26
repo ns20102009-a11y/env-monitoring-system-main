@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Environmental Monitoring System</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
+  
+  .header { background: linear-gradient(135deg, #1a2332 0%, #0d2137 100%); padding: 32px 24px; text-align: center; border-bottom: 1px solid #21262d; }
+  .header h1 { font-size: 1.9rem; font-weight: 700; color: #58a6ff; margin-bottom: 8px; }
+  .header p  { color: #8b949e; font-size: 0.95rem; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 28px 20px; }
+
+  /* ── Architecture flow ── */
+  .arch-section { margin-bottom: 36px; }
+  .section-title { font-size: 1.1rem; font-weight: 600; color: #58a6ff; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  
+  .flow { display: flex; align-items: center; gap: 0; flex-wrap: wrap; justify-content: center; }
+  .flow-node {
+    background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+    padding: 14px 18px; min-width: 130px; text-align: center; cursor: pointer;
+    transition: all 0.2s; position: relative;
+  }
+  .flow-node:hover { border-color: #58a6ff; transform: translateY(-2px); box-shadow: 0 4px 20px rgba(88,166,255,0.15); }
+  .flow-node .icon { font-size: 1.6rem; display: block; margin-bottom: 6px; }
+  .flow-node .label { font-size: 0.78rem; font-weight: 600; color: #c9d1d9; }
+  .flow-node .sublabel { font-size: 0.68rem; color: #6e7681; margin-top: 3px; }
+  .flow-node.active { border-color: #3fb950; background: #0d2117; }
+  .flow-node.pathway { border-color: #f0883e; background: #1c150a; }
+  .flow-node.kafka { border-color: #bc8cff; background: #16101f; }
+
+  .arrow { font-size: 1.4rem; color: #30363d; padding: 0 6px; flex-shrink: 0; }
+  .kafka-arrow { color: #bc8cff; }
+
+  /* ── Threshold cards ── */
+  .thresholds { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 36px; }
+  .threshold-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; overflow: hidden; }
+  .threshold-header { padding: 14px 16px; font-weight: 600; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
+  .th-aqi    { background: #0c1e2e; border-bottom: 1px solid #1d3557; color: #79c0ff; }
+  .th-temp   { background: #1e0c0c; border-bottom: 1px solid #571d1d; color: #ff7b72; }
+  .th-humid  { background: #0c1a26; border-bottom: 1px solid #1d4057; color: #39c5cf; }
+  .threshold-rows { padding: 12px 16px; }
+  .threshold-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #21262d; font-size: 0.83rem; }
+  .threshold-row:last-child { border-bottom: none; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot.red    { background: #f85149; box-shadow: 0 0 6px #f85149; }
+  .dot.yellow { background: #e3b341; box-shadow: 0 0 6px #e3b341; }
+  .dot.green  { background: #3fb950; box-shadow: 0 0 6px #3fb950; }
+  .threshold-val { font-weight: 600; color: #c9d1d9; width: 60px; flex-shrink: 0; }
+  .threshold-msg { color: #8b949e; }
+
+  /* ── Run checklist ── */
+  .checklist { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 20px; margin-bottom: 36px; }
+  .checklist-title { font-size: 1rem; font-weight: 600; color: #58a6ff; margin-bottom: 14px; }
+  .check-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid #21262d; cursor: pointer; }
+  .check-item:last-child { border-bottom: none; }
+  .check-box { width: 20px; height: 20px; border: 2px solid #30363d; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s; margin-top: 1px; }
+  .check-box.checked { background: #238636; border-color: #3fb950; }
+  .check-box.checked::after { content: '✓'; color: white; font-size: 12px; font-weight: bold; }
+  .check-content .step-label { font-size: 0.88rem; font-weight: 600; color: #c9d1d9; }
+  .check-content .step-code  { font-size: 0.78rem; font-family: 'Courier New', monospace; color: #79c0ff; background: #0d1117; padding: 3px 8px; border-radius: 4px; margin-top: 4px; display: inline-block; }
+  .check-content .step-note  { font-size: 0.75rem; color: #6e7681; margin-top: 3px; }
+
+  /* ── Kafka note ── */
+  .kafka-box { background: #16101f; border: 1px solid #6e40c9; border-radius: 10px; padding: 20px; margin-bottom: 36px; }
+  .kafka-box h3 { color: #bc8cff; font-size: 1rem; margin-bottom: 12px; }
+  .kafka-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .kafka-table th { color: #8b949e; text-align: left; padding: 6px 10px; border-bottom: 1px solid #30363d; }
+  .kafka-table td { padding: 6px 10px; border-bottom: 1px solid #21262d; color: #c9d1d9; }
+  .kafka-table td:first-child { color: #6e7681; }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
+  .tag.file  { background: #1c2d1c; color: #3fb950; border: 1px solid #2ea043; }
+  .tag.kafka { background: #1e102e; color: #bc8cff; border: 1px solid #8957e5; }
+
+  /* ── Tooltip ── */
+  .tooltip { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #1f2937; border: 1px solid #374151; border-radius: 8px; padding: 10px 14px; font-size: 0.78rem; color: #d1d5db; width: 200px; z-index: 10; text-align: left; line-height: 1.5; }
+  .flow-node:hover .tooltip { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🌍 Environmental Monitoring System</h1>
+  <p>Real-Time Streaming with Pathway + Streamlit | Hackathon-Ready Architecture</p>
+</div>
+
+<div class="container">
+
+  <!-- Architecture Flow -->
+  <div class="arch-section">
+    <div class="section-title">⚡ System Architecture (hover each node)</div>
+    <div class="flow">
+      <div class="flow-node active">
+        <span class="icon">🏭</span>
+        <div class="label">data_stream.py</div>
+        <div class="sublabel">Sensor Simulator</div>
+        <div class="tooltip"><strong>Data Generator</strong><br>Simulates IoT sensors. Appends a new JSON reading to sensor_data.jsonl every 2 seconds.</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-node">
+        <span class="icon">📄</span>
+        <div class="label">sensor_data.jsonl</div>
+        <div class="sublabel">JSONL Stream File</div>
+        <div class="tooltip"><strong>Stream Buffer</strong><br>Acts as a Kafka topic in this demo. Pathway watches this file for new lines in real-time.</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-node pathway">
+        <span class="icon">⚡</span>
+        <div class="label">Pathway Engine</div>
+        <div class="sublabel">monitoring_pipeline.py</div>
+        <div class="tooltip"><strong>Stream Processor</strong><br>Reads each new row instantly, applies risk detection logic, enriches data with alert status, and writes output.</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-node">
+        <span class="icon">📊</span>
+        <div class="label">processed_data.jsonl</div>
+        <div class="sublabel">Enriched Output</div>
+        <div class="tooltip"><strong>Output Sink</strong><br>Contains original sensor data + computed risk alerts. The dashboard reads from here.</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-node active">
+        <span class="icon">🖥️</span>
+        <div class="label">dashboard.py</div>
+        <div class="sublabel">Streamlit Dashboard</div>
+        <div class="tooltip"><strong>Live Dashboard</strong><br>Reads the output file every 3 seconds, displays metrics, alerts, and trend charts.</div>
+      </div>
+    </div>
+
+    <!-- Kafka overlay -->
+    <div style="margin-top:20px;">
+      <div style="text-align:center; font-size:0.78rem; color:#6e7681; margin-bottom:10px;">↓ With Apache Kafka (production upgrade)</div>
+      <div class="flow" style="opacity:0.75;">
+        <div class="flow-node kafka">
+          <span class="icon">📡</span>
+          <div class="label">Kafka Producer</div>
+          <div class="sublabel">Real Sensor / App</div>
+        </div>
+        <div class="arrow kafka-arrow">→</div>
+        <div class="flow-node kafka">
+          <span class="icon">🗂️</span>
+          <div class="label">Kafka Topic</div>
+          <div class="sublabel">"env-sensors"</div>
+        </div>
+        <div class="arrow kafka-arrow">→</div>
+        <div class="flow-node pathway">
+          <span class="icon">⚡</span>
+          <div class="label">Pathway + Kafka</div>
+          <div class="sublabel">pw.io.kafka.read()</div>
+        </div>
+        <div class="arrow kafka-arrow">→</div>
+        <div class="flow-node kafka">
+          <span class="icon">🗂️</span>
+          <div class="label">Kafka Topic</div>
+          <div class="sublabel">"env-alerts"</div>
+        </div>
+        <div class="arrow kafka-arrow">→</div>
+        <div class="flow-node kafka">
+          <span class="icon">🖥️</span>
+          <div class="label">Dashboard / DB</div>
+          <div class="sublabel">Consumer</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Risk Thresholds -->
+  <div class="section-title">🚨 Risk Detection Thresholds</div>
+  <div class="thresholds">
+    <div class="threshold-card">
+      <div class="threshold-header th-aqi">💨 Air Quality Index (AQI)</div>
+      <div class="threshold-rows">
+        <div class="threshold-row"><div class="dot red"></div><div class="threshold-val">&gt; 150</div><div class="threshold-msg">Unsafe Air — Avoid outdoor activity</div></div>
+        <div class="threshold-row"><div class="dot yellow"></div><div class="threshold-val">&gt; 100</div><div class="threshold-msg">Moderate — Sensitive groups cautious</div></div>
+        <div class="threshold-row"><div class="dot green"></div><div class="threshold-val">≤ 100</div><div class="threshold-msg">Good — Air quality is safe</div></div>
+      </div>
+    </div>
+    <div class="threshold-card">
+      <div class="threshold-header th-temp">🌡️ Temperature (°C)</div>
+      <div class="threshold-rows">
+        <div class="threshold-row"><div class="dot red"></div><div class="threshold-val">&gt; 40°C</div><div class="threshold-msg">Heat Risk — Stay hydrated, avoid sun</div></div>
+        <div class="threshold-row"><div class="dot yellow"></div><div class="threshold-val">&gt; 35°C</div><div class="threshold-msg">Warm — Drink water regularly</div></div>
+        <div class="threshold-row"><div class="dot green"></div><div class="threshold-val">≤ 35°C</div><div class="threshold-msg">Normal — Temperature is comfortable</div></div>
+      </div>
+    </div>
+    <div class="threshold-card">
+      <div class="threshold-header th-humid">💧 Humidity (%)</div>
+      <div class="threshold-rows">
+        <div class="threshold-row"><div class="dot red"></div><div class="threshold-val">&gt; 80%</div><div class="threshold-msg">High Moisture — Mold risk, heat stress</div></div>
+        <div class="threshold-row"><div class="dot yellow"></div><div class="threshold-val">&gt; 60%</div><div class="threshold-msg">Elevated — Monitor for discomfort</div></div>
+        <div class="threshold-row"><div class="dot green"></div><div class="threshold-val">≤ 60%</div><div class="threshold-msg">Normal — Humidity is comfortable</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Run Checklist -->
+  <div class="checklist">
+    <div class="checklist-title">✅ Launch Checklist — Click to track your progress</div>
+    <div id="checklist">
+      <div class="check-item" onclick="toggle(this)">
+        <div class="check-box"></div>
+        <div class="check-content">
+          <div class="step-label">1. Install dependencies</div>
+          <div class="step-code">pip install -r requirements.txt</div>
+          <div class="step-note">Installs Pathway, Streamlit, and Pandas</div>
+        </div>
+      </div>
+      <div class="check-item" onclick="toggle(this)">
+        <div class="check-box"></div>
+        <div class="check-content">
+          <div class="step-label">2. Open Terminal 1 — Start data generator</div>
+          <div class="step-code">python data_stream.py</div>
+          <div class="step-note">Writes sensor readings every 2 seconds to sensor_data.jsonl</div>
+        </div>
+      </div>
+      <div class="check-item" onclick="toggle(this)">
+        <div class="check-box"></div>
+        <div class="check-content">
+          <div class="step-label">3. Open Terminal 2 — Start Pathway pipeline</div>
+          <div class="step-code">python monitoring_pipeline.py</div>
+          <div class="step-note">Processes new data in real-time, writes processed_data.jsonl</div>
+        </div>
+      </div>
+      <div class="check-item" onclick="toggle(this)">
+        <div class="check-box"></div>
+        <div class="check-content">
+          <div class="step-label">4. Open Terminal 3 — Launch dashboard</div>
+          <div class="step-code">streamlit run dashboard.py</div>
+          <div class="step-note">Opens at http://localhost:8501, auto-refreshes every 3s</div>
+        </div>
+      </div>
+      <div class="check-item" onclick="toggle(this)">
+        <div class="check-box"></div>
+        <div class="check-content">
+          <div class="step-label">5. See live data in the dashboard 🎉</div>
+          <div class="step-code">http://localhost:8501</div>
+          <div class="step-note">Watch AQI, Temperature, and Humidity update in real-time</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kafka Comparison -->
+  <div class="kafka-box">
+    <h3>🔗 This Demo vs Apache Kafka (Where It Fits)</h3>
+    <table class="kafka-table">
+      <tr><th>Component</th><th>This Demo</th><th>Production (Apache)</th></tr>
+      <tr>
+        <td>Data Source</td>
+        <td><span class="tag file">JSONL File</span></td>
+        <td><span class="tag kafka">Apache Kafka Topic</span></td>
+      </tr>
+      <tr>
+        <td>Stream Input</td>
+        <td><span class="tag file">pw.io.jsonlines.read()</span></td>
+        <td><span class="tag kafka">pw.io.kafka.read()</span></td>
+      </tr>
+      <tr>
+        <td>Stream Output</td>
+        <td><span class="tag file">pw.io.jsonlines.write()</span></td>
+        <td><span class="tag kafka">pw.io.kafka.write()</span></td>
+      </tr>
+      <tr>
+        <td>Latency</td>
+        <td><span class="tag file">~500ms</span></td>
+        <td><span class="tag kafka">&lt;100ms</span></td>
+      </tr>
+      <tr>
+        <td>Scalability</td>
+        <td><span class="tag file">Single machine</span></td>
+        <td><span class="tag kafka">Distributed cluster</span></td>
+      </tr>
+      <tr>
+        <td>Processing logic</td>
+        <td colspan="2" style="color:#3fb950">✅ IDENTICAL — no code changes needed in monitoring_pipeline.py</td>
+      </tr>
+    </table>
+  </div>
+
+</div>
+
+<script>
+function toggle(item) {
+  const box = item.querySelector('.check-box');
+  box.classList.toggle('checked');
+}
+</script>
+</body>
+</html>
